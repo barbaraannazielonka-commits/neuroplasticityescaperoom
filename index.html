@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Save Your Brain — A Neuroplasticity Escape Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #090c17;
+    --bg-panel: #10152b;
+    --bg-panel-soft: #131933;
+    --line: rgba(167,139,250,0.22);
+    --cyan: #5eead4;
+    --violet: #a78bfa;
+    --amber: #fbbf24;
+    --coral: #fb7185;
+    --text: #e9ebf7;
+    --text-dim: #9aa0c3;
+    --text-faint: #6b7099;
+    --radius: 16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family:'Space Grotesk', sans-serif;
+    letter-spacing:-0.01em;
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+
+  #bg-canvas{
+    position:fixed; inset:0; width:100%; height:100%;
+    z-index:0; pointer-events:none;
+  }
+
+  #app-shell{
+    position:relative; z-index:1;
+    max-width:920px; margin:0 auto;
+    padding: 20px 20px 80px;
+    min-height:100vh;
+    display:flex; flex-direction:column;
+  }
+
+  /* ---------- TOPBAR ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:14px 18px; margin-bottom:26px;
+    background:rgba(9,12,23,0.72);
+    backdrop-filter:blur(10px);
+    border:1px solid var(--line);
+    border-radius:14px;
+    flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:30px;height:30px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--cyan), var(--violet) 70%);
+    box-shadow:0 0 16px rgba(94,234,212,0.55);
+    flex-shrink:0;
+  }
+  .brand-name{ font-size:14px; font-weight:600; letter-spacing:0.02em; color:var(--text); }
+  .brand-sub{ font-size:11px; color:var(--text-faint); letter-spacing:0.06em; text-transform:uppercase; }
+
+  .topbar-right{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+
+  .timer{
+    font-size:13px; color:var(--text-dim);
+    display:flex; align-items:center; gap:7px;
+  }
+  .timer strong{ color:var(--cyan); font-weight:700; font-size:14px; }
+
+  .code-tracker{ display:flex; gap:6px; align-items:center; }
+  .code-tracker .cslot{
+    width:24px;height:28px;border-radius:6px;
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px; font-weight:700; color:var(--text-faint);
+    background:var(--bg-panel-soft);
+    transition:all .4s ease;
+  }
+  .code-tracker .cslot.filled{
+    color:var(--bg); background:var(--amber);
+    border-color:var(--amber);
+    box-shadow:0 0 12px rgba(251,191,36,0.6);
+  }
+
+  .progress-track{ display:flex; align-items:center; gap:0; }
+  .p-node{
+    width:11px;height:11px;border-radius:50%;
+    background:var(--bg-panel-soft); border:2px solid var(--line);
+    transition:all .5s ease; flex-shrink:0;
+  }
+  .p-node.done{ background:var(--cyan); border-color:var(--cyan); box-shadow:0 0 10px rgba(94,234,212,0.7); }
+  .p-node.current{ border-color:var(--violet); box-shadow:0 0 0 4px rgba(167,139,250,0.18); }
+  .p-line{ width:16px; height:2px; background:var(--line); }
+  .p-line.done{ background:var(--cyan); }
+
+  /* ---------- STAGES ---------- */
+  .stage{ display:none; animation:fadeUp .5s ease; }
+  .stage.active{ display:block; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; color:var(--violet);
+    letter-spacing:0.14em; text-transform:uppercase;
+    margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow .dot{ width:6px;height:6px;border-radius:50%; background:var(--violet); }
+
+  h1.title{ font-size:clamp(28px,5vw,42px); margin:0 0 10px; line-height:1.08; }
+  h2.stage-title{ font-size:clamp(22px,4vw,30px); margin:0 0 12px; line-height:1.15; }
+  .lede{ font-size:16px; color:var(--text-dim); line-height:1.6; max-width:60ch; margin:0 0 22px; }
+
+  .panel{
+    background:linear-gradient(180deg, var(--bg-panel), var(--bg-panel-soft));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:26px;
+    margin-bottom:18px;
+  }
+
+  .btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600; font-size:14.5px;
+    padding:13px 26px; border-radius:10px;
+    border:none; cursor:pointer;
+    background:var(--cyan); color:#06231f;
+    transition:transform .15s ease, box-shadow .2s ease, background .2s ease;
+    box-shadow:0 4px 18px rgba(94,234,212,0.22);
+  }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 8px 22px rgba(94,234,212,0.32); }
+  .btn:active{ transform:translateY(0); }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn.ghost{
+    background:transparent; color:var(--text); border:1px solid var(--line);
+    box-shadow:none;
+  }
+  .btn.ghost:hover{ border-color:var(--cyan); color:var(--cyan); transform:translateY(-2px); box-shadow:none;}
+  .btn.violet{ background:var(--violet); color:#1a0f38; box-shadow:0 4px 18px rgba(167,139,250,0.28); }
+
+  .btn-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; align-items:center;}
+
+  .feedback{
+    margin-top:16px; padding:14px 16px; border-radius:10px;
+    font-size:14px; line-height:1.55; display:none;
+  }
+  .feedback.show{ display:block; animation:fadeUp .35s ease; }
+  .feedback.good{ background:rgba(94,234,212,0.09); border:1px solid rgba(94,234,212,0.35); color:#c9fff3; }
+  .feedback.bad{ background:rgba(251,113,133,0.09); border:1px solid rgba(251,113,133,0.35); color:#ffd7dd; }
+
+  .fact{
+    margin-top:14px; padding:14px 16px; border-radius:10px;
+    background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.3);
+    font-size:13.5px; color:#e3ddff; line-height:1.55;
+  }
+  .fact b{ color:var(--violet); }
+
+  /* ---------- CHALLENGE 1: myth cards ---------- */
+  .myth-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:640px){ .myth-grid{ grid-template-columns:1fr; } }
+  .myth-card{
+    padding:16px; border-radius:12px; cursor:pointer;
+    background:var(--bg-panel-soft); border:1.5px solid var(--line);
+    font-size:14.5px; line-height:1.5; transition:all .18s ease;
+    user-select:none;
+  }
+  .myth-card:hover{ border-color:var(--text-faint); }
+  .myth-card.selected{
+    border-color:var(--coral); background:rgba(251,113,133,0.09);
+    box-shadow:0 0 0 1px rgba(251,113,133,0.3) inset;
+  }
+  .myth-card .tag{
+    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10px;
+    color:var(--text-faint); letter-spacing:0.08em; margin-bottom:6px;
+  }
+  .myth-card.selected .tag{ color:var(--coral); }
+  .myth-card.reveal-true{ border-color:var(--cyan); }
+  .myth-card.reveal-myth{ border-color:var(--coral); background:rgba(251,113,133,0.09); }
+
+  /* ---------- CHALLENGE 2: memory ---------- */
+  .sequence-stage{
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+    padding:30px 10px; margin-bottom:6px;
+  }
+  .seq-tile{
+    width:64px; height:64px; border-radius:14px;
+    background:var(--bg-panel-soft); border:1.5px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-size:30px; transition:all .25s ease;
+  }
+  .seq-tile.lit{ border-color:var(--amber); box-shadow:0 0 22px rgba(251,191,36,0.5); transform:scale(1.08); }
+  .countdown-num{
+    text-align:center; font-size:64px; font-weight:700; color:var(--cyan);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .answer-slots{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:18px 0; }
+  .answer-slots .slot{
+    width:56px;height:56px;border-radius:12px;
+    border:2px dashed var(--line); display:flex; align-items:center; justify-content:center;
+    font-size:26px; color:var(--text-faint); background:var(--bg-panel-soft);
+  }
+  .answer-slots .slot.filled{ border-style:solid; border-color:var(--violet); background:rgba(167,139,250,0.1); }
+  .bank{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:22px; }
+  .bank .b-tile{
+    width:56px;height:56px;border-radius:12px; cursor:pointer;
+    background:var(--bg-panel-soft); border:1.5px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:26px;
+    transition:all .15s ease;
+  }
+  .bank .b-tile:hover{ border-color:var(--cyan); transform:translateY(-2px); }
+  .bank .b-tile.used{ opacity:0.25; pointer-events:none; }
+
+  /* ---------- CHALLENGE 3: pathway ---------- */
+  .stage-pool{ display:flex; flex-direction:column; gap:10px; margin-bottom:20px;}
+  .path-card{
+    padding:14px 16px; border-radius:10px; cursor:pointer;
+    background:var(--bg-panel-soft); border:1.5px solid var(--line);
+    font-size:14.5px; line-height:1.5; transition:all .18s ease;
+    display:flex; gap:12px; align-items:flex-start;
+  }
+  .path-card:hover{ border-color:var(--cyan); }
+  .path-card.placed{ opacity:0.3; pointer-events:none; }
+  .path-card .stage-icon{ font-size:20px; flex-shrink:0; }
+  .order-slots{ display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+  .order-slot{
+    min-height:46px; border-radius:10px; border:2px dashed var(--line);
+    display:flex; align-items:center; gap:10px; padding:0 14px;
+    color:var(--text-faint); font-size:13.5px;
+  }
+  .order-slot.filled{ border-style:solid; border-color:var(--cyan); color:var(--text); background:rgba(94,234,212,0.06); }
+  .order-slot .num{ font-family:'JetBrains Mono',monospace; color:var(--violet); font-weight:700; }
+
+  /* ---------- CHALLENGE 4: mindset ---------- */
+  .quote-box{
+    padding:18px 20px; border-radius:12px; margin-bottom:20px;
+    background:rgba(251,113,133,0.06); border-left:3px solid var(--coral);
+    font-style:italic; font-size:16px; color:#ffe3e7;
+  }
+  .choice-list{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    text-align:left; padding:15px 18px; border-radius:12px; cursor:pointer;
+    background:var(--bg-panel-soft); border:1.5px solid var(--line);
+    font-size:14.5px; line-height:1.5; display:flex; gap:12px;
+    transition:all .18s ease;
+  }
+  .choice:hover{ border-color:var(--cyan); transform:translateX(3px); }
+  .choice .letter{
+    font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--violet);
+    flex-shrink:0;
+  }
+  .choice.correct{ border-color:var(--cyan); background:rgba(94,234,212,0.09); }
+  .choice.wrong{ border-color:var(--coral); background:rgba(251,113,133,0.09); }
+
+  /* ---------- CHALLENGE 5: vault ---------- */
+  .frag-row{ display:flex; gap:14px; justify-content:center; margin:26px 0; flex-wrap:wrap; }
+  .frag-tile{
+    width:60px;height:70px;border-radius:12px;
+    background:var(--bg-panel-soft); border:1.5px solid var(--amber);
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; font-weight:700; color:var(--amber);
+    font-family:'JetBrains Mono',monospace;
+    box-shadow:0 0 16px rgba(251,191,36,0.25);
+  }
+  .vault-input{ display:flex; gap:10px; justify-content:center; margin:22px 0; }
+  .vault-input input{
+    width:52px;height:60px; text-align:center; font-size:24px;
+    font-family:'JetBrains Mono',monospace; font-weight:700;
+    background:var(--bg-panel-soft); color:var(--text);
+    border:1.5px solid var(--line); border-radius:10px;
+    text-transform:uppercase;
+  }
+  .vault-input input:focus{ outline:none; border-color:var(--cyan); box-shadow:0 0 0 3px rgba(94,234,212,0.15); }
+
+  /* ---------- FINAL ---------- */
+  .final-panel{ text-align:center; }
+  .final-badge{
+    width:88px;height:88px;border-radius:50%; margin:0 auto 20px;
+    background:radial-gradient(circle at 35% 30%, var(--amber), var(--coral) 80%);
+    box-shadow:0 0 40px rgba(251,191,36,0.5);
+    display:flex; align-items:center; justify-content:center; font-size:40px;
+  }
+  .recap-list{ text-align:left; display:flex; flex-direction:column; gap:10px; margin:22px 0; }
+  .recap-item{
+    padding:12px 16px; border-radius:10px; background:var(--bg-panel-soft);
+    border:1px solid var(--line); font-size:13.5px; color:var(--text-dim); line-height:1.5;
+  }
+  .recap-item b{ color:var(--cyan); }
+  .stat-row{ display:flex; gap:20px; justify-content:center; margin:22px 0; flex-wrap:wrap;}
+  .stat{ text-align:center; }
+  .stat .n{ font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:var(--amber); }
+  .stat .l{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.08em; margin-top:2px;}
+
+  .hint-btn{ background:none;border:none; color:var(--text-faint); font-size:12.5px; cursor:pointer; text-decoration:underline; padding:0; margin-top:10px;}
+  .hint-btn:hover{ color:var(--violet); }
+  .hint-text{ font-size:13px; color:var(--text-dim); margin-top:8px; display:none; }
+  .hint-text.show{ display:block; }
+
+  #spark-canvas{ position:fixed; inset:0; pointer-events:none; z-index:9; display:none;}
+
+  @media (prefers-reduced-motion: reduce){
+    .stage{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="spark-canvas"></canvas>
+
+<div id="app-shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-name">SAVE YOUR BRAIN</div>
+        <div class="brand-sub">Neuroplasticity Lab</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="timer">⏱ <strong id="timerDisplay" class="mono">00:00</strong></div>
+      <div class="code-tracker" id="codeTracker">
+        <div class="cslot" data-i="0">?</div>
+        <div class="cslot" data-i="1">?</div>
+        <div class="cslot" data-i="2">?</div>
+        <div class="cslot" data-i="3">?</div>
+      </div>
+      <div class="progress-track" id="progressTrack"></div>
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <section class="stage active" id="stage-intro">
+    <div class="eyebrow"><span class="dot"></span>Mission Briefing</div>
+    <h1 class="title">A network is going quiet.<br>Only new connections can save it.</h1>
+    <p class="lede">Every thought you've ever had carved a path through billions of neurons. Right now, one of those pathways is fading — and it's up to you to rebuild it. Your brain doesn't just sit there; it rewires itself every time you learn, practice, or struggle through something hard. That's <b style="color:var(--cyan)">neuroplasticity</b>.</p>
+    <div class="panel">
+      <h2 class="stage-title" style="font-size:19px;">How this works</h2>
+      <p class="lede" style="margin-bottom:14px;">Solve 5 challenges. Each one teaches you something real about how your brain changes — and hands you one fragment of the <span class="mono" style="color:var(--amber)">Neuroplasticity Code</span>. Collect all four, then unlock the network in the final round.</p>
+      <p class="lede" style="margin-bottom:0; font-size:13.5px; color:var(--text-faint);">⏱ Most explorers finish in 10–15 minutes. Take your time — the network is patient.</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="startBtn">Enter the Lab →</button>
+    </div>
+  </section>
+
+  <!-- CHALLENGE 1 -->
+  <section class="stage" id="stage-1">
+    <div class="eyebrow"><span class="dot"></span>Challenge 01 · Brain Myth Purge</div>
+    <h2 class="stage-title">Some of these statements are corrupting the network.</h2>
+    <p class="lede">Exactly <b style="color:var(--coral)">3 of the 6</b> statements below are myths. Click to flag every false one, then purge them.</p>
+    <div class="panel">
+      <div class="myth-grid" id="mythGrid"></div>
+      <div class="btn-row">
+        <button class="btn" id="mythSubmit">Purge Selected Myths</button>
+        <span id="mythCount" style="font-size:13px;color:var(--text-faint);"></span>
+      </div>
+      <div class="feedback" id="mythFeedback"></div>
+    </div>
+  </section>
+
+  <!-- CHALLENGE 2 -->
+  <section class="stage" id="stage-2">
+    <div class="eyebrow"><span class="dot"></span>Challenge 02 · Memory Relay</div>
+    <h2 class="stage-title">Watch the signal. Then rebuild it from memory.</h2>
+    <p class="lede">Short-term memory is how your brain briefly holds information before deciding whether it's worth strengthening into something permanent. Watch closely — it only flashes once.</p>
+    <div class="panel">
+      <div id="memoryStageArea"></div>
+      <div id="memoryAnswerArea" style="display:none;">
+        <p style="font-size:13.5px;color:var(--text-faint);margin-bottom:0;">Tap the icons in the order they appeared:</p>
+        <div class="answer-slots" id="answerSlots"></div>
+        <div class="bank" id="bankTiles"></div>
+        <div class="btn-row">
+          <button class="btn ghost" id="memReplay">↻ Replay Sequence</button>
+          <button class="btn" id="memClear">Clear</button>
+        </div>
+      </div>
+      <div class="feedback" id="memFeedback"></div>
+    </div>
+  </section>
+
+  <!-- CHALLENGE 3 -->
+  <section class="stage" id="stage-3">
+    <div class="eyebrow"><span class="dot"></span>Challenge 03 · The Learning Pathway</div>
+    <h2 class="stage-title">Rebuild the stages, in order.</h2>
+    <p class="lede">Every skill you've ever learned moved through the same four stages. Click them below, in the order a pathway actually forms.</p>
+    <div class="panel">
+      <div class="order-slots" id="orderSlots"></div>
+      <div class="stage-pool" id="stagePool"></div>
+      <div class="btn-row">
+        <button class="btn" id="pathwayCheck">Check Order</button>
+        <button class="btn ghost" id="pathwayReset">Reset</button>
+      </div>
+      <div class="feedback" id="pathwayFeedback"></div>
+    </div>
+  </section>
+
+  <!-- CHALLENGE 4 -->
+  <section class="stage" id="stage-4">
+    <div class="eyebrow"><span class="dot"></span>Challenge 04 · Growth Mindset</div>
+    <h2 class="stage-title">The words you use rewire the outcome.</h2>
+    <p class="lede">A student just got their test back. What they say next changes whether their brain treats this as a dead end — or as data.</p>
+    <div class="panel">
+      <div class="quote-box">"I failed my test. I'm just bad at English."</div>
+      <div class="choice-list" id="choiceList"></div>
+      <div class="feedback" id="mindsetFeedback"></div>
+    </div>
+  </section>
+
+  <!-- CHALLENGE 5 -->
+  <section class="stage" id="stage-5">
+    <div class="eyebrow"><span class="dot"></span>Challenge 05 · The Neuroplasticity Code</div>
+    <h2 class="stage-title">You collected four letters. The vault wants a different word.</h2>
+    <p class="lede">G-R-O-W was your reward for getting here — but it isn't the password. The vault opens for the one thing you've actually been rewiring this whole time. Four letters. Think about what just changed.</p>
+    <div class="panel">
+      <div class="vault-input" id="vaultInput"></div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn violet" id="unlockBtn">Unlock the Network</button>
+      </div>
+      <div style="text-align:center;">
+        <button class="hint-btn" id="hintBtn">Need a hint?</button>
+        <div class="hint-text" id="hintText">You've been changing your ___ this whole time. It's the thing that thinks, decides, and just rewired itself.</div>
+      </div>
+      <div class="feedback" id="vaultFeedback"></div>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="stage" id="stage-final">
+    <div class="panel final-panel">
+      <div class="final-badge">🧠</div>
+      <div class="eyebrow" style="justify-content:center;"><span class="dot"></span>Network Restored</div>
+      <h1 class="title" style="font-size:clamp(24px,4.5vw,34px);">You saved your brain.</h1>
+      <p class="lede" style="margin:0 auto 6px;">Every wrong turn, every retry — that <em>was</em> the lesson. That struggle is what neuroplasticity actually feels like from the inside.</p>
+      <div class="stat-row">
+        <div class="stat"><div class="n mono" id="finalTime">00:00</div><div class="l">Time</div></div>
+        <div class="stat"><div class="n mono" id="finalAttempts">0</div><div class="l">Retries</div></div>
+        <div class="stat"><div class="n mono">MIND</div><div class="l">Code</div></div>
+      </div>
+      <div class="recap-list">
+        <div class="recap-item"><b>G — Myths busted.</b> Intelligence isn't fixed. You use your whole brain, and it keeps forming new connections your entire life.</div>
+        <div class="recap-item"><b>R — Memory tested.</b> Holding information briefly is only step one — it has to be strengthened to last.</div>
+        <div class="recap-item"><b>O — Pathway ordered.</b> Exposure → Practice → Strengthening → Mastery. Skipping steps doesn't skip the wiring.</div>
+        <div class="recap-item"><b>W — Mindset chosen.</b> "Not yet" keeps the pathway open. "I'm bad at this" closes it before it can grow.</div>
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn" id="restartBtn">Run It Again</button>
+      </div>
+    </div>
+  </section>
+
+  <footer style="text-align:center; margin-top:36px; padding-top:18px; border-top:1px solid var(--line); font-size:12px; color:var(--text-faint); letter-spacing:0.02em;">
+    Created for Nannestad High School — by Barbara Anna Zielonka
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== STATE ===================== */
+  const state = {
+    progress: 0,          // 0..5
+    fragments: ["G","R","O","W"],
+    attempts: 0,
+    startTime: null,
+    timerHandle: null,
+  };
+
+  const stages = ["stage-intro","stage-1","stage-2","stage-3","stage-4","stage-5","stage-final"];
+
+  function showStage(id){
+    stages.forEach(s => document.getElementById(s).classList.toggle("active", s===id));
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  /* ===================== TOPBAR: progress + code ===================== */
+  const progressTrack = document.getElementById("progressTrack");
+  function renderProgress(){
+    progressTrack.innerHTML = "";
+    for(let i=0;i<5;i++){
+      const node = document.createElement("div");
+      node.className = "p-node" + (i < state.progress ? " done" : (i===state.progress ? " current" : ""));
+      progressTrack.appendChild(node);
+      if(i<4){
+        const line = document.createElement("div");
+        line.className = "p-line" + (i < state.progress ? " done" : "");
+        progressTrack.appendChild(line);
+      }
+    }
+  }
+  function renderCode(){
+    document.querySelectorAll("#codeTracker .cslot").forEach((el,i)=>{
+      if(i < state.progress){
+        el.textContent = state.fragments[i];
+        el.classList.add("filled");
+      } else {
+        el.textContent = "?";
+        el.classList.remove("filled");
+      }
+    });
+  }
+  function advance(){
+    state.progress = Math.min(5, state.progress+1);
+    renderProgress(); renderCode();
+    growNetwork(state.progress);
+    pulseBurst();
+  }
+  renderProgress(); renderCode();
+
+  /* ===================== TIMER ===================== */
+  const timerDisplay = document.getElementById("timerDisplay");
+  function startTimer(){
+    state.startTime = Date.now();
+    state.timerHandle = setInterval(()=>{
+      const s = Math.floor((Date.now()-state.startTime)/1000);
+      const mm = String(Math.floor(s/60)).padStart(2,"0");
+      const ss = String(s%60).padStart(2,"0");
+      timerDisplay.textContent = mm+":"+ss;
+    },1000);
+  }
+  function stopTimer(){ clearInterval(state.timerHandle); return timerDisplay.textContent; }
+
+  document.getElementById("startBtn").addEventListener("click", ()=>{
+    startTimer();
+    showStage("stage-1");
+  });
+
+  /* ===================== NEURAL BACKGROUND ===================== */
+  const canvas = document.getElementById("bg-canvas");
+  const ctx = canvas.getContext("2d");
+  let W,H, nodes=[], edges=[];
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function buildNetwork(){
+    nodes = [];
+    const count = W < 700 ? 26 : 42;
+    for(let i=0;i<count;i++){
+      nodes.push({
+        x: Math.random()*W, y: Math.random()*H,
+        vx: (Math.random()-0.5)*0.12, vy:(Math.random()-0.5)*0.12,
+        r: 1.4 + Math.random()*1.8
+      });
+    }
+    edges = [];
+    for(let i=0;i<nodes.length;i++){
+      const dists = nodes.map((n,j)=>({j, d: j===i?Infinity:Math.hypot(n.x-nodes[i].x, n.y-nodes[i].y)}))
+                          .sort((a,b)=>a.d-b.d).slice(0,2);
+      dists.forEach(d=>{
+        const key = [i,d.j].sort().join("-");
+        if(!edges.find(e=>e.key===key)){
+          edges.push({key, a:i, b:d.j, born: Math.random(), flash:0});
+        }
+      });
+    }
+    // shuffle reveal order so growth looks organic
+    edges = edges.map(e=>({...e, ord: Math.random()})).sort((a,b)=>a.ord-b.ord);
+  }
+  buildNetwork();
+
+  function growNetwork(progress){
+    const target = Math.round(edges.length * (progress/5));
+    edges.forEach((e,i)=>{ if(i<target) e.flash = 1; });
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const revealCount = Math.round(edges.length * (state.progress/5)) || Math.round(edges.length*0.12);
+    edges.forEach((e,i)=>{
+      if(i>revealCount && state.progress<5) return;
+      const A = nodes[e.a], B = nodes[e.b];
+      const alpha = 0.10 + (e.flash*0.5);
+      ctx.strokeStyle = i%2===0 ? `rgba(94,234,212,${alpha})` : `rgba(167,139,250,${alpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y);
+      ctx.stroke();
+      if(e.flash>0) e.flash = Math.max(0, e.flash-0.01);
+    });
+    nodes.forEach(n=>{
+      if(!reduceMotion){
+        n.x += n.vx; n.y += n.vy;
+        if(n.x<0||n.x>W) n.vx*=-1;
+        if(n.y<0||n.y>H) n.vy*=-1;
+      }
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(233,235,247,0.55)";
+      ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  // gentle spark burst on stage complete
+  const sparkCanvas = document.getElementById("spark-canvas");
+  const sctx = sparkCanvas.getContext("2d");
+  function pulseBurst(){
+    if(reduceMotion) return;
+    sparkCanvas.width = window.innerWidth; sparkCanvas.height = window.innerHeight;
+    sparkCanvas.style.display = "block";
+    const cx = window.innerWidth/2, cy = 90;
+    let parts = [];
+    for(let i=0;i<28;i++){
+      const ang = Math.random()*Math.PI*2, spd = 1+Math.random()*3;
+      parts.push({x:cx,y:cy, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd, life:1, c: Math.random()>0.5?"94,234,212":"251,191,36"});
+    }
+    let frame=0;
+    function anim(){
+      sctx.clearRect(0,0,sparkCanvas.width, sparkCanvas.height);
+      parts.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy; p.life-=0.02;
+        sctx.fillStyle = `rgba(${p.c},${Math.max(p.life,0)})`;
+        sctx.beginPath(); sctx.arc(p.x,p.y,2.4,0,Math.PI*2); sctx.fill();
+      });
+      frame++;
+      if(frame<55) requestAnimationFrame(anim);
+      else sparkCanvas.style.display="none";
+    }
+    anim();
+  }
+
+  function bigCelebration(){
+    if(reduceMotion) return;
+    sparkCanvas.width = window.innerWidth; sparkCanvas.height = window.innerHeight;
+    sparkCanvas.style.display = "block";
+    let parts = [];
+    for(let i=0;i<120;i++){
+      parts.push({
+        x: window.innerWidth/2, y: window.innerHeight*0.3,
+        vx:(Math.random()-0.5)*7, vy:(Math.random()-0.9)*7,
+        life:1, c: ["94,234,212","251,191,36","167,139,250"][Math.floor(Math.random()*3)]
+      });
+    }
+    let frame=0;
+    function anim(){
+      sctx.clearRect(0,0,sparkCanvas.width, sparkCanvas.height);
+      parts.forEach(p=>{
+        p.vy += 0.06;
+        p.x+=p.vx; p.y+=p.vy; p.life-=0.012;
+        sctx.fillStyle = `rgba(${p.c},${Math.max(p.life,0)})`;
+        sctx.beginPath(); sctx.arc(p.x,p.y,3,0,Math.PI*2); sctx.fill();
+      });
+      frame++;
+      if(frame<130) requestAnimationFrame(anim);
+      else sparkCanvas.style.display="none";
+    }
+    anim();
+  }
+
+  /* ===================== CHALLENGE 1: MYTHS ===================== */
+  const mythData = [
+    {text:"You only use about 10% of your brain.", myth:true},
+    {text:"New neural connections can form throughout your entire life.", myth:false},
+    {text:"Once you're an adult, your intelligence is fixed and can't change.", myth:true},
+    {text:"Repeating a skill strengthens the neural pathway behind it.", myth:false},
+    {text:"Adults are biologically incapable of learning a new language.", myth:true},
+    {text:"Sleep helps your brain consolidate what you learned that day.", myth:false},
+  ];
+  const mythGrid = document.getElementById("mythGrid");
+  let mythSelected = new Set();
+  mythData.forEach((m,i)=>{
+    const card = document.createElement("div");
+    card.className = "myth-card";
+    card.innerHTML = `<span class="tag">STATEMENT ${i+1}</span><br>${m.text}`;
+    card.addEventListener("click", ()=>{
+      if(card.classList.contains("locked")) return;
+      if(mythSelected.has(i)){ mythSelected.delete(i); card.classList.remove("selected"); }
+      else { mythSelected.add(i); card.classList.add("selected"); }
+      document.getElementById("mythCount").textContent = mythSelected.size + " of 3 flagged";
+    });
+    mythGrid.appendChild(card);
+  });
+  document.getElementById("mythSubmit").addEventListener("click", ()=>{
+    const fb = document.getElementById("mythFeedback");
+    const correctSet = new Set(mythData.map((m,i)=>m.myth?i:null).filter(v=>v!==null));
+    const isCorrect = mythSelected.size===correctSet.size && [...mythSelected].every(i=>correctSet.has(i));
+    if(isCorrect){
+      document.querySelectorAll(".myth-card").forEach((card,i)=>{
+        card.classList.add("locked");
+        card.classList.add(mythData[i].myth ? "reveal-myth" : "reveal-true");
+      });
+      fb.className = "feedback good show";
+      fb.innerHTML = "✅ <b>Myths purged.</b> Your brain physically rewires itself at any age — that's the whole point of this game. Fragment collected.";
+      document.getElementById("mythSubmit").disabled = true;
+      const goBtn = document.createElement("button");
+      goBtn.className="btn"; goBtn.style.marginTop="14px"; goBtn.textContent="Continue →";
+      goBtn.addEventListener("click", ()=>{ advance(); showStage("stage-2"); initMemory(); });
+      fb.appendChild(document.createElement("br"));
+      fb.appendChild(goBtn);
+    } else {
+      state.attempts++;
+      fb.className = "feedback bad show";
+      fb.innerHTML = "❌ Not quite the right set of myths. Re-read the statements and try again.";
+    }
+  });
+
+  /* ===================== CHALLENGE 2: MEMORY ===================== */
+  const ICONS = ["🧠","⚡","💡","🔬","📚","🌙"];
+  let sequence = [];
+  function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]); }
+
+  function initMemory(){
+    sequence = shuffle(ICONS).slice(0,5);
+    document.getElementById("memoryAnswerArea").style.display = "none";
+    document.getElementById("memFeedback").className = "feedback";
+    playSequence();
+  }
+  function playSequence(){
+    const area = document.getElementById("memoryStageArea");
+    area.innerHTML = `<div class="countdown-num" id="cd">3</div>`;
+    let n = 3;
+    const cd = setInterval(()=>{
+      n--;
+      if(n>0){ document.getElementById("cd").textContent = n; }
+      else {
+        clearInterval(cd);
+        showSequence();
+      }
+    },700);
+  }
+  function showSequence(){
+    const area = document.getElementById("memoryStageArea");
+    const row = document.createElement("div");
+    row.className = "sequence-stage";
+    sequence.forEach(()=>{
+      const t = document.createElement("div");
+      t.className = "seq-tile";
+      row.appendChild(t);
+    });
+    area.innerHTML = "";
+    area.appendChild(row);
+    const tiles = row.querySelectorAll(".seq-tile");
+    let i=0;
+    function step(){
+      tiles.forEach(t=>{ t.classList.remove("lit"); t.textContent=""; });
+      if(i<sequence.length){
+        tiles[i].textContent = sequence[i];
+        tiles[i].classList.add("lit");
+        i++;
+        setTimeout(step, 800);
+      } else {
+        setTimeout(()=>{
+          area.innerHTML = `<p style="text-align:center;color:var(--text-faint);font-size:13.5px;">Sequence hidden. Rebuild it below ↓</p>`;
+          setupAnswerUI();
+        }, 500);
+      }
+    }
+    step();
+  }
+  let userAnswer = [];
+  function setupAnswerUI(){
+    document.getElementById("memoryAnswerArea").style.display = "block";
+    userAnswer = [];
+    const slots = document.getElementById("answerSlots");
+    slots.innerHTML = "";
+    sequence.forEach(()=>{
+      const s = document.createElement("div");
+      s.className = "slot";
+      slots.appendChild(s);
+    });
+    const bank = document.getElementById("bankTiles");
+    bank.innerHTML = "";
+    shuffle(sequence).forEach((icon)=>{
+      const t = document.createElement("div");
+      t.className = "b-tile";
+      t.textContent = icon;
+      t.addEventListener("click", ()=>{
+        if(userAnswer.length>=sequence.length) return;
+        userAnswer.push(icon);
+        t.classList.add("used");
+        renderAnswerSlots();
+        if(userAnswer.length===sequence.length) checkMemory();
+      });
+      bank.appendChild(t);
+    });
+  }
+  function renderAnswerSlots(){
+    document.querySelectorAll("#answerSlots .slot").forEach((s,i)=>{
+      if(userAnswer[i]){ s.textContent = userAnswer[i]; s.classList.add("filled"); }
+      else { s.textContent=""; s.classList.remove("filled"); }
+    });
+  }
+  document.getElementById("memReplay").addEventListener("click", ()=>{ playSequence(); document.getElementById("memoryAnswerArea").style.display="none"; });
+  document.getElementById("memClear").addEventListener("click", ()=>{
+    userAnswer = [];
+    renderAnswerSlots();
+    document.querySelectorAll("#bankTiles .b-tile").forEach(t=>t.classList.remove("used"));
+  });
+  function checkMemory(){
+    const fb = document.getElementById("memFeedback");
+    const correct = userAnswer.every((v,i)=>v===sequence[i]);
+    if(correct){
+      fb.className = "feedback good show";
+      fb.innerHTML = "✅ <b>Signal rebuilt.</b> That brief flash lived in your working memory — but without review, it fades in under a minute. Repetition is what makes it stick. Fragment collected.";
+      const goBtn = document.createElement("button");
+      goBtn.className="btn"; goBtn.style.marginTop="14px"; goBtn.textContent="Continue →";
+      goBtn.addEventListener("click", ()=>{ advance(); showStage("stage-3"); initPathway(); });
+      fb.appendChild(document.createElement("br"));
+      fb.appendChild(goBtn);
+    } else {
+      state.attempts++;
+      fb.className = "feedback bad show";
+      fb.innerHTML = "❌ That's not quite the order. Replay the sequence and watch closely.";
+      setTimeout(()=>{
+        userAnswer = [];
+        renderAnswerSlots();
+        document.querySelectorAll("#bankTiles .b-tile").forEach(t=>t.classList.remove("used"));
+      }, 900);
+    }
+  }
+
+  /* ===================== CHALLENGE 3: PATHWAY ===================== */
+  const pathStages = [
+    {icon:"🌱", label:"Exposure", detail:"You meet something new — unfamiliar neurons fire for the first time."},
+    {icon:"🔁", label:"Practice", detail:"You repeat the action, firing the same pathway again and again."},
+    {icon:"🧬", label:"Strengthening", detail:"The synapse thickens — \u201cneurons that fire together, wire together.\u201d"},
+    {icon:"⚡", label:"Mastery", detail:"The pathway fires so efficiently the skill feels automatic."},
+  ];
+  let pathOrder = [];
+  function initPathway(){
+    pathOrder = [];
+    document.getElementById("pathwayFeedback").className = "feedback";
+    renderOrderSlots();
+    const pool = document.getElementById("stagePool");
+    pool.innerHTML = "";
+    shuffle(pathStages.map((s,i)=>i)).forEach(i=>{
+      const s = pathStages[i];
+      const card = document.createElement("div");
+      card.className = "path-card";
+      card.dataset.idx = i;
+      card.innerHTML = `<span class="stage-icon">${s.icon}</span><div><b>${s.label}</b><br><span style="color:var(--text-dim);font-size:13px;">${s.detail}</span></div>`;
+      card.addEventListener("click", ()=>{
+        if(pathOrder.includes(i) || pathOrder.length>=4) return;
+        pathOrder.push(i);
+        card.classList.add("placed");
+        renderOrderSlots();
+      });
+      pool.appendChild(card);
+    });
+  }
+  function renderOrderSlots(){
+    const slots = document.getElementById("orderSlots");
+    slots.innerHTML = "";
+    for(let i=0;i<4;i++){
+      const div = document.createElement("div");
+      div.className = "order-slot" + (pathOrder[i]!==undefined ? " filled" : "");
+      const idx = pathOrder[i];
+      div.innerHTML = `<span class="num">${i+1}</span> ${idx!==undefined ? pathStages[idx].icon+" "+pathStages[idx].label : "—"}`;
+      slots.appendChild(div);
+    }
+  }
+  document.getElementById("pathwayReset").addEventListener("click", initPathway);
+  document.getElementById("pathwayCheck").addEventListener("click", ()=>{
+    const fb = document.getElementById("pathwayFeedback");
+    if(pathOrder.length<4){
+      fb.className="feedback bad show";
+      fb.innerHTML = "❌ Place all four stages before checking.";
+      return;
+    }
+    const correct = pathOrder.every((v,i)=>v===i);
+    if(correct){
+      fb.className = "feedback good show";
+      fb.innerHTML = "✅ <b>Pathway rebuilt.</b> Exposure → Practice → Strengthening → Mastery. Skip a step and the wiring never fully sets. Fragment collected.";
+      const goBtn = document.createElement("button");
+      goBtn.className="btn"; goBtn.style.marginTop="14px"; goBtn.textContent="Continue →";
+      goBtn.addEventListener("click", ()=>{ advance(); showStage("stage-4"); initMindset(); });
+      fb.appendChild(document.createElement("br"));
+      fb.appendChild(goBtn);
+    } else {
+      state.attempts++;
+      fb.className = "feedback bad show";
+      fb.innerHTML = "❌ The order's off — a pathway can't strengthen before it's been practiced. Try again.";
+      setTimeout(initPathway, 900);
+    }
+  });
+
+  /* ===================== CHALLENGE 4: MINDSET ===================== */
+  const choices = [
+    {letter:"A", text:"Give up on English — it's obviously not for me.", correct:false,
+     explain:"A fixed mindset treats failure as proof of a permanent limit. It shuts the pathway down before it can grow."},
+    {letter:"B", text:"I'm not good at this yet — my brain can build this skill with practice.", correct:true,
+     explain:"That one word — \u201cyet\u201d — keeps the pathway open. It reframes failure as a signal for what to practice next, not a verdict."},
+    {letter:"C", text:"Avoid English class whenever possible.", correct:false,
+     explain:"Avoidance feels safe short-term, but it guarantees the pathway never gets the repetition it needs to strengthen."},
+  ];
+  function initMindset(){
+    const list = document.getElementById("choiceList");
+    list.innerHTML = "";
+    document.getElementById("mindsetFeedback").className = "feedback";
+    choices.forEach(c=>{
+      const div = document.createElement("div");
+      div.className = "choice";
+      div.innerHTML = `<span class="letter">${c.letter}</span><span>${c.text}</span>`;
+      div.addEventListener("click", ()=>{
+        const fb = document.getElementById("mindsetFeedback");
+        if(c.correct){
+          div.classList.add("correct");
+          document.querySelectorAll(".choice").forEach(ch=>ch.style.pointerEvents="none");
+          fb.className = "feedback good show";
+          fb.innerHTML = `✅ <b>Right response.</b> ${c.explain} Fragment collected.`;
+          const goBtn = document.createElement("button");
+          goBtn.className="btn"; goBtn.style.marginTop="14px"; goBtn.textContent="Continue →";
+          goBtn.addEventListener("click", ()=>{ advance(); showStage("stage-5"); initVault(); });
+          fb.appendChild(document.createElement("br"));
+          fb.appendChild(goBtn);
+        } else {
+          state.attempts++;
+          div.classList.add("wrong");
+          fb.className = "feedback bad show";
+          fb.innerHTML = `❌ ${c.explain} Pick again.`;
+        }
+      });
+      list.appendChild(div);
+    });
+  }
+
+  /* ===================== CHALLENGE 5: VAULT ===================== */
+  function initVault(){
+    const vaultInput = document.getElementById("vaultInput");
+    vaultInput.innerHTML = "";
+    for(let i=0;i<4;i++){
+      const inp = document.createElement("input");
+      inp.maxLength = 1;
+      inp.dataset.i = i;
+      inp.addEventListener("input", ()=>{
+        inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g,"");
+        if(inp.value && inp.nextElementSibling) inp.nextElementSibling.focus();
+      });
+      inp.addEventListener("keydown", (e)=>{
+        if(e.key==="Backspace" && !inp.value && inp.previousElementSibling) inp.previousElementSibling.focus();
+      });
+      vaultInput.appendChild(inp);
+    }
+    document.getElementById("vaultFeedback").className = "feedback";
+    document.getElementById("hintText").classList.remove("show");
+  }
+  document.getElementById("hintBtn").addEventListener("click", ()=>{
+    document.getElementById("hintText").classList.toggle("show");
+  });
+  document.getElementById("unlockBtn").addEventListener("click", ()=>{
+    const val = [...document.querySelectorAll("#vaultInput input")].map(i=>i.value).join("");
+    const fb = document.getElementById("vaultFeedback");
+    if(val === "MIND"){
+      fb.className = "feedback good show";
+      fb.innerHTML = "✅ <b>Network unlocked.</b> Your brain just did, quite literally, what the word says.";
+      bigCelebration();
+      const finalTime = stopTimer();
+      document.getElementById("finalTime").textContent = finalTime;
+      document.getElementById("finalAttempts").textContent = state.attempts;
+      setTimeout(()=> showStage("stage-final"), 1200);
+    } else {
+      state.attempts++;
+      fb.className = "feedback bad show";
+      fb.innerHTML = "❌ Not the right word yet. Remember — it's not G-R-O-W. Think about what just happened to your thinking.";
+    }
+  });
+
+  document.getElementById("restartBtn").addEventListener("click", ()=>{
+    state.progress = 0; state.attempts = 0;
+    renderProgress(); renderCode();
+    buildNetwork();
+    mythSelected = new Set();
+    document.querySelectorAll(".myth-card").forEach(c=>{
+      c.className = "myth-card";
+    });
+    document.getElementById("mythSubmit").disabled = false;
+    document.getElementById("mythFeedback").className = "feedback";
+    document.getElementById("mythCount").textContent = "";
+    showStage("stage-intro");
+  });
+
+})();
+</script>
+</body>
+</html>
